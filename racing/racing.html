@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kaziX's racing court</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+        }
+        canvas {
+            border: 2px solid #555;
+            background-color: #222;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-size: 1.2rem;
+            display: none;
+        }
+        #menu, #game-over, #countdown {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.85);
+            z-index: 10;
+        }
+        #countdown {
+            font-size: 8rem;
+            font-weight: bold;
+            color: #f1c40f;
+            display: none;
+            background: none;
+        }
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: #e74c3c;
+            color: white;
+        }
+        .garage-section {
+            margin: 15px 0;
+            text-align: left;
+            width: 100%;
+        }
+        .garage-section h3 {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .car-selection {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .model-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+        .model-btn.active {
+            background: #3498db;
+            border-color: #3498db;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
+        }
+        .color-selection {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .color-dot.active {
+            border-color: #fff;
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        .stat-bar {
+            height: 4px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        .stat-fill {
+            height: 100%;
+            background: #f1c40f;
+            box-shadow: 0 0 8px rgba(241, 196, 15, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <div id="lap-message" style="position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); font-size: 3rem; font-weight: bold; color: #f1c40f; text-shadow: 2px 2px 8px #000; pointer-events: none; opacity: 0; transition: opacity 0.5s;">LAP COMPLETE!</div>
+        <div id="ui">
+            <div style="background: rgba(10, 25, 41, 0.8); padding: 15px; border-radius: 15px; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                <div style="font-weight: bold; font-size: 2.2rem; color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);">🏎️ <span id="speed">0</span> <span style="font-size: 1rem;">KM/H</span></div>
+                <div style="margin: 8px 0; font-family: 'Courier New', monospace; font-weight: bold;">⏱️ TIME: <span id="timer">0.00</span>s</div>
+                <div style="font-size: 0.9rem; color: #888;">🏆 BEST: <span id="bestTime">-</span>s</div>
+                <div style="margin-top: 10px; font-weight: bold; font-size: 1.2rem; color: #3498db;">LAP: <span id="laps">0</span> / 3</div>
+                
+                <div style="margin-top: 15px;">
+                    <span style="font-size: 0.8rem; font-weight: bold; color: #e74c3c;">🔥 NITRO SYSTEM</span>
+                    <div style="width: 150px; height: 12px; background: rgba(0,0,0,0.5); display: inline-block; border: 1px solid #444; border-radius: 10px; overflow: hidden; vertical-align: middle; margin-left: 10px;">
+                        <div id="nitro-bar" style="width: 100%; height: 100%; background: linear-gradient(to right, #2980b9, #3498db, #f1c40f, #e67e22); box-shadow: 0 0 15px rgba(52, 152, 219, 0.8); transition: width 0.1s;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls" style="margin-top: 20px; text-transform: uppercase;">[W/A/S/D] Drive | [CAPS LOCK] Nitro | [SPACE] Brake</div>
+        </div>
+        <div id="menu" class="glass">
+            <h1 style="font-size: 3rem; margin-bottom: 30px; letter-spacing: 2px;">kaziX's racing court</h1>
+            
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1);">
+                <div class="garage-section">
+                    <h3>SELECT CAR</h3>
+                    <div class="car-selection">
+                        <button id="btn-SPEEDSTER" class="model-btn active" onclick="selectModel('SPEEDSTER')">BOLT</button>
+                        <button id="btn-DRIFTER" class="model-btn" onclick="selectModel('DRIFTER')">SLIDE</button>
+                        <button id="btn-TANK" class="model-btn" onclick="selectModel('TANK')">IRON</button>
+                        <button id="btn-COBRA" class="model-btn" onclick="selectModel('COBRA')">COBRA</button>
+                        <button id="btn-TRUCK" class="model-btn" onclick="selectModel('TRUCK')">TIK</button>
+                        <button id="btn-GHOST" class="model-btn" onclick="selectModel('GHOST')">GHOST</button>
+                    </div>
+                </div>
+
+                <div class="garage-section">
+                    <h3>PAINT JOB</h3>
+                    <div class="color-selection">
+                        <div id="color-3498db" class="color-dot active" style="background: #3498db;" onclick="selectColor('#3498db')"></div>
+                        <div id="color-e74c3c" class="color-dot" style="background: #e74c3c;" onclick="selectColor('#e74c3c')"></div>
+                        <div id="color-f1c40f" class="color-dot" style="background: #f1c40f;" onclick="selectColor('#f1c40f')"></div>
+                        <div id="color-2ecc71" class="color-dot" style="background: #2ecc71;" onclick="selectColor('#2ecc71')"></div>
+                        <div id="color-9b59b6" class="color-dot" style="background: #9b59b6;" onclick="selectColor('#9b59b6')"></div>
+                        <div id="color-e67e22" class="color-dot" style="background: #e67e22;" onclick="selectColor('#e67e22')"></div>
+                        <div id="color-ffffff" class="color-dot" style="background: #ffffff;" onclick="selectColor('#ffffff')"></div>
+                    </div>
+                </div>
+
+                <div id="garage-stats" style="margin-top: 20px; text-align: left;">
+                    <div style="color: #f1c40f; font-weight: bold; margin-bottom: 5px;" id="stat-name">The Bolt</div>
+                    <div style="font-size: 0.75rem; color: #ccc; margin-bottom: 15px;" id="stat-desc">High Speed, Slow Turning</div>
+                    
+                    <div style="font-size: 0.7rem;">SPEED</div>
+                    <div class="stat-bar"><div id="bar-speed" class="stat-fill" style="width: 100%;"></div></div>
+                    
+                    <div style="font-size: 0.7rem; margin-top: 8px;">ACCEL</div>
+                    <div class="stat-bar"><div id="bar-accel" class="stat-fill" style="width: 80%;"></div></div>
+                    
+                    <div style="font-size: 0.7rem; margin-top: 8px;">HANDLING</div>
+                    <div class="stat-bar"><div id="bar-handle" class="stat-fill" style="width: 60%;"></div></div>
+                </div>
+            </div>
+
+            <button class="btn" onclick="startGame()">START RACE</button>
+            <p style="margin-top: 15px; font-size: 0.8rem; color: #888;">CAPS LOCK to unleash Nitro!</p>
+        </div>
+        <div id="countdown">3</div>
+        <div id="game-over" style="display: none;">
+            <h1 id="result-title">RACE FINISHED</h1>
+            <p>Your Time: <span id="final-time">0.00</span>s</p>
+            <button class="btn" onclick="startGame()">RETRY</button>
+        </div>
+    </div>
+    <script src="racing.js"></script>
+</body>
+</html>
